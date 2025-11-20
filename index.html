@@ -1,59 +1,95 @@
 <!DOCTYPE html>
 <html lang="ja">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>マラソン大会 結果一覧</title>
-  <script src="https://cdn.tailwindcss.com"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>スプレッドシート データ表示</title>
+
+    <link rel="stylesheet" href="https://cdn.datatables.net/2.0.8/css/dataTables.dataTables.min.css">
+    <style>
+        body { font-family: Arial, sans-serif; margin: 20px; }
+        #data-table { width:100%; }
+    </style>
 </head>
-<body class="bg-gray-100 p-6">
-  <h1 class="text-3xl font-bold mb-6 text-center">マラソン大会 結果一覧</h1>
+<body>
 
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="container"></div>
+<h1>✅ スプレッドシート データ一覧</h1>
 
-  <script>
-    const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSpbUDctERPVMq0WWTQ-xM1zsFdbp4g9XSxMweOYgsTNnYZppVVGJngedaG3zgX9NPAYQtGUvWcrOUf/pub?gid=586609283&single=true&output=csv";
+<table id="data-table" class="display">
+    <thead>
+        <tr>
+            <th>No.</th>
+            <th>(性別別)ID</th>
+            <th>氏名</th>
+            <th>性別</th>
+            <th>Time</th>
+        </tr>
+    </thead>
+    <tbody></tbody>
+</table>
 
-    fetch(url)
-      .then(r => r.text())
-      .then(text => {
-        const cleaned = text.replace(/\r/g, "");
-        const rows = cleaned.split("\n").map(r => r.split(","));
-        const header = rows[0].map(h => h.trim());
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/2.0.8/js/dataTables.min.js"></script>
 
-        const items = rows.slice(1)
-          .filter(r => r.length >= header.length && r.some(v => v.trim() !== ""))
-          .map(r => Object.fromEntries(r.map((v, i) => [header[i], v.trim()])));
+<script>
+const SPREADSHEET_ID = "15o-YvVRYn6yvpsMcEFUI4eZ-0HIWWpiAzCwR9d7a6bc";
+const GID = "586609283";
 
-        const men = items.filter(x => x["性別"] === "男");
-        const women = items.filter(x => x["性別"] === "女");
+// gviz API の JSON 出力
+const QUERY_URL =
+  `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?gid=${GID}&tqx=out:json`;
 
-        render(men, women);
-      });
+// DataTables 初期化
+function initializeDataTable(tableData) {
+    $('#data-table').DataTable({
+        data: tableData,
+        columns: [
+            { title: "No." },
+            { title: "(性別別)ID" },
+            { title: "氏名" },
+            { title: "性別" },
+            { title: "Time" }
+        ],
+        language: {
+            url: "https://cdn.datatables.net/plug-ins/2.0.8/i18n/ja.json"
+        }
+    });
+}
 
-    function createCard(item) {
-      return `
-        <div class="p-4 bg-white shadow rounded-2xl mb-3">
-          <p class="text-sm text-gray-400">No: ${item["No.(性別別)"]}</p>
-          <p class="text-xl font-bold">${item["氏名"]}</p>
-          <p class="text-sm text-gray-500">ID: ${item["ID"]}</p>
-          <p class="text-lg mt-1">Time: ${item["Time"]}</p>
-        </div>
-      `;
+// gviz JSON を fetch で取得
+async function loadSheet() {
+    try {
+        const res = await fetch(QUERY_URL);
+        const text = await res.text();
+
+        // gviz は JSON っぽいが "google.visualization.Query.setResponse(...)" で囲まれているため除去
+        const json = JSON.parse(text.replace(/.*setResponse\(/, "").replace(/\);?$/, ""));
+
+        const rows = json.table.rows;
+        const data = [];
+
+        rows.forEach(r => {
+            const c = r.c;
+            data.push([
+                c[0]?.v ?? "",
+                c[1]?.v ?? "",
+                c[2]?.v ?? "",
+                c[3]?.v ?? "",
+                c[4]?.v ?? ""
+            ]);
+        });
+
+        initializeDataTable(data);
+
+    } catch (err) {
+        console.error("エラー:", err);
+        $('#data-table').after(`<p style="color:red;">⚠️ データの取得に失敗しました: ${err}</p>`);
     }
+}
 
-    function render(men, women) {
-      document.getElementById("container").innerHTML = `
-        <div>
-          <h2 class="text-2xl font-semibold mb-3 text-blue-700">男子</h2>
-          ${men.map(m => createCard(m)).join("")}
-        </div>
-        <div>
-          <h2 class="text-2xl font-semibold mb-3 text-pink-700">女子</h2>
-          ${women.map(w => createCard(w)).join("")}
-        </div>
-      `;
-    }
-  </script>
+// ページ読み込み時に実行
+loadSheet();
+</script>
+
 </body>
 </html>

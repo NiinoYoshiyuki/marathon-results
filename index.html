@@ -17,8 +17,7 @@
     fetch(url)
       .then(r => r.text())
       .then(text => {
-        const cleaned = text.replace(/
-/g, "");
+        const cleaned = text.replace(/\r/g, "");
         const rows = cleaned.split("\n").map(r => r.split(","));
         const header = rows[0].map(h => h.trim());
 

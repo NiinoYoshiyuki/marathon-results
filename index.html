@@ -12,37 +12,30 @@
   <div class="grid grid-cols-1 md:grid-cols-2 gap-6" id="container"></div>
 
   <script>
-    const csvUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSpbUDctERPVMq0WWTQ-xM1zsFdbp4g9XSxMweOYgsTNnYZppVVGJngedaG3zgX9NPAYQtGUvWcrOUf/pub?gid=586609283&single=true&output=csv";
+    const url = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSpbUDctERPVMq0WWTQ-xM1zsFdbp4g9XSxMweOYgsTNnYZppVVGJngedaG3zgX9NPAYQtGUvWcrOUf/pub?gid=586609283&single=true&output=csv";
 
-    // CORS回避：GitHub Pages で使えるCORSプロキシ
-    const proxy = "https://cors.isomorphic-git.org/";
-
-    fetch(proxy + csvUrl)
+    fetch(url)
       .then(r => r.text())
       .then(text => {
-        // 改行とCRを安全に処理
-        const cleaned = text.replace(/\r/g, "");
+        const cleaned = text.replace(/
+/g, "");
         const rows = cleaned.split("\n").map(r => r.split(","));
         const header = rows[0].map(h => h.trim());
 
         const items = rows.slice(1)
-          .filter(r => r.some(v => v.trim() !== ""))
+          .filter(r => r.length >= header.length && r.some(v => v.trim() !== ""))
           .map(r => Object.fromEntries(r.map((v, i) => [header[i], v.trim()])));
 
         const men = items.filter(x => x["性別"] === "男");
         const women = items.filter(x => x["性別"] === "女");
 
         render(men, women);
-      })
-      .catch(err => {
-        console.error(err);
-        document.getElementById("container").innerHTML =
-          "<p class='text-red-500'>データ読み込みに失敗しました。</p>";
       });
 
     function createCard(item) {
       return `
         <div class="p-4 bg-white shadow rounded-2xl mb-3">
+          <p class="text-sm text-gray-400">No: ${item["No.(性別別)"]}</p>
           <p class="text-xl font-bold">${item["氏名"]}</p>
           <p class="text-sm text-gray-500">ID: ${item["ID"]}</p>
           <p class="text-lg mt-1">Time: ${item["Time"]}</p>
